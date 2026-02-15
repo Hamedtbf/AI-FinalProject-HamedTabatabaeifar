@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAI | Pneumonia Diagnostics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --danger: #ef4444;
+            --success: #10b981;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: #1e293b;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin: 0;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: var(--secondary);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #e2e8f0;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: #f1f5f9;
+        }
+
+        #imagePreview {
+            width: 100%;
+            border-radius: 12px;
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 1.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        #resultArea {
+            display: none;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .status-positive { background: #fee2e2; color: var(--danger); }
+        .status-negative { background: #dcfce7; color: var(--success); }
+
+        .confidence-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        #barFill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 1s ease-in-out;
+        }
+
+        .gradcam-container {
+            margin-top: 1.5rem;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .loader {
+            display: none;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1><i class="fa-solid fa-lungs-virus"></i> MedAI Diagnostics</h1>
+        <p>Advanced Deep Learning Pneumonia Analysis</p>
+    </div>
+
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--primary)"></i>
+        <p id="uploadText" style="margin-top: 10px;">Click to upload X-Ray image</p>
+        <input type="file" id="fileInput" hidden accept="image/*" onchange="previewImage(event)">
+        <img id="imagePreview">
+    </div>
+
+    <button class="btn btn-primary" onclick="predict()" id="predictBtn">
+        <span id="btnText">Analyze Image</span>
+    </button>
+
+    <div class="loader" id="loader"></div>
+
+    <div id="resultArea">
+        <div id="statusBadge" class="status-badge"></div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+            <span>Confidence Level</span>
+            <span id="confValue" style="font-weight: 700;">0%</span>
+        </div>
+        <div class="confidence-bar"><div id="barFill"></div></div>
+
+        <div id="gradcamSection" style="display: none;">
+            <p style="font-size: 0.75rem; color: var(--secondary); margin-top: 1.5rem;">
+                <i class="fa-solid fa-circle-info"></i> AI Attention Map (Grad-CAM)
+            </p>
+            <div class="gradcam-container">
+                <img id="gradcamImg" style="width: 100%;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function previewImage(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('imagePreview');
+            output.src = reader.result;
+            output.style.display = 'block';
+            document.getElementById('uploadText').style.display = 'none';
+        };
+        reader.readAsDataURL(event.target.files[0]);
+    }
+
+    async function predict() {
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput.files.length === 0) return alert("Please select an image!");
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        // UI State
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('predictBtn').disabled = true;
+        document.getElementById('btnText').innerText = "Processing...";
+        document.getElementById('resultArea').style.display = 'none';
+
+        try {
+            const response = await fetch('/predict', { method: 'POST', body: formData });
+            const data = await response.json();
+
+            // Show Results
+            document.getElementById('resultArea').style.display = 'block';
+            const badge = document.getElementById('statusBadge');
+            badge.innerText = data.label;
+            badge.className = 'status-badge ' + (data.label === 'PNEUMONIA' ? 'status-positive' : 'status-negative');
+
+            document.getElementById('confValue').innerText = data.confidence + '%';
+            document.getElementById('barFill').style.width = data.confidence + '%';
+
+            if (data.show_gradcam) {
+                document.getElementById('gradcamSection').style.display = 'block';
+                document.getElementById('gradcamImg').src = data.gradcam_url;
+            } else {
+                document.getElementById('gradcamSection').style.display = 'none';
+            }
+        } catch (e) {
+            alert("Error connecting to server!");
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('predictBtn').disabled = false;
+            document.getElementById('btnText').innerText = "Analyze Image";
+        }
+    }
+</script>
+
+</body>
+</html>
