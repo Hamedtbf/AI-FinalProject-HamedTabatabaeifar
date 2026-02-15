@@ -8,7 +8,6 @@ from tensorflow.keras.preprocessing.image import img_to_array
 from PIL import Image
 import io
 
-# --- تنظیمات اولیه برای سکوت کردن لاگ‌ها ---
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
@@ -19,12 +18,10 @@ SAVE_PATH = os.path.join(BASE_DIR, 'static', 'results', 'cam_output.jpg')
 
 app = Flask(__name__)
 
-# ایجاد پوشه نتایج
 RESULT_FOLDER = os.path.join('static', 'results')
 if not os.path.exists(RESULT_FOLDER):
     os.makedirs(RESULT_FOLDER)
 
-# بارگذاری مدل
 print("Loading Model...")
 model = load_model(MODEL_PATH)
 
@@ -37,7 +34,6 @@ def get_gradcam(img_array, last_conv_layer_name='conv2d_5'):
         
         # عبور لایه به لایه برای پیدا کردن خروجی کانولوشن و خروجی نهایی
         for layer in model.layers:
-            # اگر لایه آخر سیگموئید است، برای گرادیان بهتر آن را نادیده می‌گیریم (Logits)
             if layer == model.layers[-1] and hasattr(layer, 'activation'):
                 continue 
             x = layer(x)
@@ -45,7 +41,6 @@ def get_gradcam(img_array, last_conv_layer_name='conv2d_5'):
                 conv_output = x
                 tape.watch(conv_output)
         
-        # فرض بر این است که خروجی مدل (بدون سیگموئید نهایی) در x است
         loss = x[:, 0]
 
     grads = tape.gradient(loss, conv_output)
@@ -55,7 +50,6 @@ def get_gradcam(img_array, last_conv_layer_name='conv2d_5'):
     heatmap = conv_output @ pooled_grads[..., tf.newaxis]
     heatmap = tf.squeeze(heatmap)
 
-    # تبدیل به هیت‌مپ مثبت و نرمالایز شده
     heatmap = tf.maximum(heatmap, 0)
     max_val = tf.math.reduce_max(heatmap)
     if max_val == 0:
@@ -122,5 +116,4 @@ def predict():
     return jsonify(response)
 
 if __name__ == '__main__':
-    # استفاده از پورت 5005 برای اطمینان از آزاد بودن
-    app.run(debug=True, host='0.0.0.0', port=5005)
+    app.run(debug=True, host='0.0.0.0', port=5000)
