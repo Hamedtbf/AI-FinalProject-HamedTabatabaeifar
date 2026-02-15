@@ -1,2 +1,4 @@
+env
 env/*
-models/*
+*.h5
+test_images/
