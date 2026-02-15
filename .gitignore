@@ -1,0 +1,6 @@
+env
+env/*
+*.h5
+test_images/
+src/static/results/
+*.pdf
